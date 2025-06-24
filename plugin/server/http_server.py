@@ -278,6 +278,48 @@ class MCPRequestHandler(BaseHTTPRequestHandler):
                         },
                         500,
                     )
+
+            elif path == "/makeFunction" or path == "/make/function" or path == "/createFunction":
+                # Allow making functions via GET as well for convenience. This
+                # mirrors the POST handler but uses query parameters.
+                address_str = params.get("address")
+
+                if not address_str:
+                    self._send_json_response(
+                        {
+                            "error": "Missing address parameter",
+                            "help": "Required parameter: address (in hex format, e.g., 0x401000)",
+                            "received": params,
+                        },
+                        400,
+                    )
+                    return
+
+                try:
+                    addr_int = int(address_str, 16) if address_str.lower().startswith("0x") else int(address_str)
+
+                    result = self.binary_ops.create_function_at(addr_int)
+
+                    status_code = 200 if result.get("success") else 500
+                    self._send_json_response(result, status_code)
+                except ValueError:
+                    self._send_json_response(
+                        {
+                            "error": "Invalid address format",
+                            "help": "Address must be a valid hexadecimal (0x...) or decimal number",
+                            "received": address_str,
+                        },
+                        400,
+                    )
+                except Exception as e:
+                    bn.log_error(f"Error creating function at address {address_str}: {e}")
+                    self._send_json_response(
+                        {
+                            "error": str(e),
+                            "address": address_str,
+                        },
+                        500,
+                    )
                     
             elif path == "/codeReferences":
                 function_name = params.get("function")
@@ -638,6 +680,51 @@ class MCPRequestHandler(BaseHTTPRequestHandler):
                             "comment": None,
                             "message": "No comment found for this function",
                         }
+                    )
+
+            elif path == "/makeFunction" or path == "/make/function" or path == "/createFunction":
+                # Endpoint to create a new function at the specified address.
+                address_param = params.get("address")
+
+                if not address_param:
+                    self._send_json_response(
+                        {
+                            "error": "Missing address parameter",
+                            "help": "Required parameter: address (e.g., 0x401000)",
+                            "received": params,
+                        },
+                        400,
+                    )
+                    return
+
+                try:
+                    # Accept both hex (0x...) and decimal numbers
+                    if isinstance(address_param, str) and address_param.lower().startswith("0x"):
+                        addr_int = int(address_param, 16)
+                    else:
+                        addr_int = int(address_param)
+
+                    result = self.binary_ops.create_function_at(addr_int)
+
+                    status_code = 200 if result.get("success") else 500
+                    self._send_json_response(result, status_code)
+                except ValueError:
+                    self._send_json_response(
+                        {
+                            "error": "Invalid address format",
+                            "help": "Address must be a valid hexadecimal (0x...) or decimal number",
+                            "received": address_param,
+                        },
+                        400,
+                    )
+                except Exception as e:
+                    bn.log_error(f"Error creating function at address {address_param}: {e}")
+                    self._send_json_response(
+                        {
+                            "error": str(e),
+                            "address": address_param,
+                        },
+                        500,
                     )
             elif path == "/editFunctionSignature":
                 function_name = params.get("functionName")

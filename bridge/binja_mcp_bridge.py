@@ -248,6 +248,20 @@ def get_user_defined_type(type_name: str) -> str:
     Retrive definition of a user defined type (struct, enumeration, typedef, union)
     """
     return safe_get("getUserDefinedType", {"name": type_name})
+
+# ---------------------------------------------------------------------------
+# Binary modification helpers
+# ---------------------------------------------------------------------------
+
+
+@mcp.tool()
+def make_function(address: str) -> str:
+    """
+    Create a function at the specified address (equivalent to "Make Function"
+    in Binary Ninja). If a function already exists at that address, a message
+    indicating so will be returned.
+    """
+    return safe_post("makeFunction", {"address": address})
     
 if __name__ == "__main__":
     print("Starting MCP bridge service...")

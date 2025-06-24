@@ -23,3 +23,7 @@ Desktop.ini
 *.log
 *.tmp
 *.bak
+#documentation and source code to help ai assistnat
+binjapythonsdk/
+binja_documentation_pt_2
+binja_documentation_pt_2

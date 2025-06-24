@@ -800,6 +800,73 @@ class BinaryOperations:
         except Exception as e:
             bn.log_error(f"Error getting functions containing address {hex(address)}: {e}")
             return []
+
+    # ------------------------------------------------------------------
+    # Function creation helpers
+    # ------------------------------------------------------------------
+
+    def create_function_at(self, address: int) -> Dict[str, Any]:
+        """Create a function at the specified address if it does not already exist.
+
+        This mirrors the "Make Function" action that can be triggered inside
+        the Binary Ninja UI.  If a function already exists at the supplied
+        address, the call is treated as a no-op and information about the
+        existing function is returned instead of raising an error.
+
+        Args:
+            address: The start address of the desired function.
+
+        Returns:
+            Dictionary with the following keys:
+                success (bool):   Indicates whether the action succeeded.
+                created (bool):   True if a new function was created, False if a
+                                 function already existed.
+                name (str):       Name of the (new or existing) function.
+                address (str):    Hex string of the function start address.
+
+        Raises:
+            RuntimeError: If no binary is loaded.
+        """
+        if not self._current_view:
+            raise RuntimeError("No binary loaded")
+
+        try:
+            # If a function already exists at this address, return early.
+            existing_func = self._current_view.get_function_at(address)
+            if existing_func:
+                return {
+                    "success": True,
+                    "created": False,
+                    "name": existing_func.name,
+                    "address": hex(existing_func.start),
+                }
+
+            # BinaryView.create_user_function is the public API used by the UI
+            # action "Make Function".  Fall back to the older add_function API
+            # if the running Binary Ninja version predates this method.
+            if hasattr(self._current_view, "create_user_function"):
+                self._current_view.create_user_function(address)
+            else:
+                # Older versions use add_function which behaves similarly.
+                self._current_view.add_function(address)
+
+            # Retrieve the function object so we can report the final name.
+            new_func = self._current_view.get_function_at(address)
+
+            return {
+                "success": True,
+                "created": True,
+                "name": new_func.name if new_func else "(unknown)",
+                "address": hex(address),
+            }
+        except Exception as e:
+            bn.log_error(f"Error creating function at {hex(address)}: {e}")
+            return {
+                "success": False,
+                "created": False,
+                "error": str(e),
+                "address": hex(address),
+            }
             
     def get_function_code_references(self, function_name: str) -> list:
         """Get all code references to a function.
